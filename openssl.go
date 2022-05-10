@@ -1,9 +1,7 @@
 package openssl
 
 import (
-	"bytes"
 	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -49,13 +47,6 @@ func (o Creds) equals(i Creds) bool {
 	}
 
 	return true
-}
-
-// New instanciates and initializes a new OpenSSL encrypter
-func New() *OpenSSL {
-	return &OpenSSL{
-		openSSLSaltHeader: "Salted__", // OpenSSL salt is always this string + 8 bytes of actual salt
-	}
 }
 
 // DecryptBytes takes a slice of bytes with base64 encoded, encrypted data to decrypt
@@ -104,23 +95,6 @@ func (o OpenSSL) DecryptBinaryBytes(passphrase string, encryptedData []byte, cg 
 	return o.decrypt(creds.Key, creds.IV, encryptedData)
 }
 
-func (o OpenSSL) decrypt(key, iv, data []byte) ([]byte, error) {
-	if len(data) == 0 || len(data)%aes.BlockSize != 0 {
-		return nil, fmt.Errorf("bad blocksize(%v), aes.BlockSize = %v", len(data), aes.BlockSize)
-	}
-	c, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	cbc := cipher.NewCBCDecrypter(c, iv)
-	cbc.CryptBlocks(data[aes.BlockSize:], data[aes.BlockSize:])
-	out, err := o.pkcs7Unpad(data[aes.BlockSize:], aes.BlockSize)
-	if out == nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // EncryptBytes encrypts a slice of bytes that are base64 encoded in a manner compatible to OpenSSL encryption
 // functions using AES-256-CBC as encryption algorithm. This function generates
 // a random salt on every execution.
@@ -164,22 +138,6 @@ func (o OpenSSL) EncryptBytesWithSaltAndDigestFunc(passphrase string, salt, plai
 	}
 
 	return []byte(base64.StdEncoding.EncodeToString(enc)), nil
-}
-
-func (o OpenSSL) encrypt(key, iv, data []byte) ([]byte, error) {
-	padded, err := o.pkcs7Pad(data, aes.BlockSize)
-	if err != nil {
-		return nil, err
-	}
-
-	c, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	cbc := cipher.NewCBCEncrypter(c, iv)
-	cbc.CryptBlocks(padded[aes.BlockSize:], padded[aes.BlockSize:])
-
-	return padded, nil
 }
 
 // EncryptBinaryBytesWithSaltAndDigestFunc encrypts a slice of bytes in a manner compatible to OpenSSL
@@ -238,37 +196,3 @@ func (o OpenSSL) MustGenerateSalt() []byte {
 	return s
 }
 
-// pkcs7Pad appends padding.
-func (o OpenSSL) pkcs7Pad(data []byte, blocklen int) ([]byte, error) {
-	if blocklen <= 0 {
-		return nil, fmt.Errorf("invalid blocklen %d", blocklen)
-	}
-	padlen := 1
-	for ((len(data) + padlen) % blocklen) != 0 {
-		padlen++
-	}
-
-	pad := bytes.Repeat([]byte{byte(padlen)}, padlen)
-	return append(data, pad...), nil
-}
-
-// pkcs7Unpad returns slice of the original data without padding.
-func (o OpenSSL) pkcs7Unpad(data []byte, blocklen int) ([]byte, error) {
-	if blocklen <= 0 {
-		return nil, fmt.Errorf("invalid blocklen %d", blocklen)
-	}
-	if len(data)%blocklen != 0 || len(data) == 0 {
-		return nil, fmt.Errorf("invalid data len %d", len(data))
-	}
-	padlen := int(data[len(data)-1])
-	if padlen > blocklen || padlen == 0 {
-		return nil, fmt.Errorf("invalid padding")
-	}
-	pad := data[len(data)-padlen:]
-	for i := 0; i < padlen; i++ {
-		if pad[i] != byte(padlen) {
-			return nil, fmt.Errorf("invalid padding")
-		}
-	}
-	return data[:len(data)-padlen], nil
-}
