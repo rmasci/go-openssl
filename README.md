@@ -2,12 +2,6 @@
 
 `go-openssl` is a small library wrapping the `crypto/aes` functions in a way the output is compatible to OpenSSL / CryptoJS. For all encryption / decryption processes AES256 is used so this library will not be able to decrypt messages generated with other than `openssl aes-256-cbc`. If you're using CryptoJS to process the data you also need to use AES256 on that side.
 
-## Installation
-
-```
-go get codecloud.web.att.com/st_cloututils/go-openssl
-```
-
 ## Usage example
 
 The usage is quite simple as you don't need any special knowledge about OpenSSL and/or AES256:
