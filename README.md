@@ -11,7 +11,7 @@ The usage is quite simple as you don't need any special knowledge about OpenSSL 
 ```go
 import (
   "fmt"
-  "clodecloud.web.att.com/st_cloudutils/go-openssl"
+  "github.com/rmasci/go-openssl"
 )
 
 func main() {
@@ -34,7 +34,7 @@ func main() {
 ```go
 import (
   "fmt"
-  "codecloud.web.att.com/st_cloudutils/go-openssl"
+  "github.com/rmasci/go-openssl"
 )
 
 func main() {
